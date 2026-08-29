@@ -1,111 +1,91 @@
-import { useEffect, useMemo, useState } from "react";
-
-import {
-  getInventory,
-} from "../api/inventoryApi";
-
+import { useEffect, useState } from "react";
+import { getInventory } from "../api/inventoryApi";
 import type { Inventory } from "../types/inventory";
 
-import InventoryStats from "../components/InventoryStats";
-import InventoryFilters from "../components/InventoryFilters";
-import InventoryTable from "../components/InventoryTable";
-
-export default function InventoryPage() {
+function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
-
   const [loading, setLoading] = useState(true);
-
-  const [error, setError] = useState<string | null>(
-    null
-  );
-
-  const [search, setSearch] = useState("");
-
-  const [location, setLocation] = useState("");
-
-  const loadInventory = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const data = await getInventory();
-
-      setInventory(data);
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        "Unable to load inventory. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    loadInventory();
+    getInventory()
+      .then(setInventory)
+      .catch((err) => {
+        console.error(err);
+        setError("Failed to load inventory.");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const filteredInventory = useMemo(() => {
-    return inventory.filter((item) => {
-      const matchesSearch =
-        item.product_name
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        item.variant_name
-          ?.toLowerCase()
-          .includes(search.toLowerCase());
-
-      const matchesLocation =
-        !location ||
-        item.stock_location_name
-          .toLowerCase()
-          .includes(location.toLowerCase());
-
-      return Boolean(matchesSearch && matchesLocation);
-    });
-  }, [inventory, search, location]);
+  const totalStock = inventory.reduce((s, i) => s + Number(i.quantity || 0), 0);
+  const locations = new Set(inventory.map((i) => i.location_name)).size;
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div>
+      <div className="page-head">
         <div>
-          <h1 className="text-2xl font-semibold">
-            Inventory
-          </h1>
-
-          <p className="text-sm text-gray-500">
-            Monitor stock across all locations and channels.
-          </p>
+          <h1>Inventory</h1>
+          <div className="sub">Current stock levels by location</div>
         </div>
-
-        <button
-          onClick={loadInventory}
-          className="rounded-md border px-4 py-2 hover:bg-gray-50"
-        >
-          Refresh
-        </button>
       </div>
 
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-700">
-          {error}
+      <div className="stats">
+        <div className="stat">
+          <div className="stat-label">Stock Entries</div>
+          <div className="stat-value">{inventory.length}</div>
         </div>
-      )}
+        <div className="stat">
+          <div className="stat-label">Total Quantity</div>
+          <div className="stat-value">{totalStock}</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Locations</div>
+          <div className="stat-value">{locations}</div>
+        </div>
+      </div>
 
-      <InventoryStats inventory={inventory} />
+      {error && <div className="alert-error">{error}</div>}
 
-      <InventoryFilters
-        search={search}
-        location={location}
-        onSearchChange={setSearch}
-        onLocationChange={setLocation}
-      />
-
-      <InventoryTable
-        inventory={filteredInventory}
-        loading={loading}
-      />
+      <div className="table-wrap">
+        {loading ? (
+          <div className="state">
+            <div className="spinner" />
+            Loading inventory...
+          </div>
+        ) : (
+          <table className="data">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Product</th>
+                <th>Location</th>
+                <th style={{ textAlign: "right" }}>Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inventory.map((item) => (
+                <tr key={item.id}>
+                  <td className="mono">{item.id}</td>
+                  <td style={{ fontWeight: 600 }}>{item.product_name}</td>
+                  <td>{item.location_name}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <span className="badge badge-blue">{item.quantity}</span>
+                  </td>
+                </tr>
+              ))}
+              {inventory.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="table-empty">
+                    No inventory found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
+
+export default InventoryPage;

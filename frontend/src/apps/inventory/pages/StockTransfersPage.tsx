@@ -1,105 +1,162 @@
-import type { StockTransfer } from "../types/inventory";
+import { useEffect, useState } from "react";
+import {
+  getTransfers,
+  createStockTransfer,
+  getLocations,
+} from "../api/inventoryApi";
+import type { StockTransfer, StockLocation } from "../types/inventory";
 
-interface StockTransferTableProps {
-  transfers: StockTransfer[];
-  loading: boolean;
-}
+function StockTransfersPage() {
+  const [transfers, setTransfers] = useState<StockTransfer[]>([]);
+  const [locations, setLocations] = useState<StockLocation[]>([]);
+  const [fromLocation, setFromLocation] = useState("");
+  const [toLocation, setToLocation] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(true);
 
-export default function StockTransferTable({
-  transfers,
-  loading,
-}: StockTransferTableProps) {
-  if (loading) {
-    return (
-      <div className="rounded-lg border bg-white p-8 text-center">
-        Loading stock transfers...
-      </div>
-    );
-  }
+  const loadData = async () => {
+    try {
+      const [t, l] = await Promise.all([getTransfers(), getLocations()]);
+      setTransfers(t);
+      setLocations(l);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const from = Number(fromLocation);
+    const to = Number(toLocation);
+    if (!from || !to) {
+      alert("Please select both locations.");
+      return;
+    }
+    if (from === to) {
+      alert("Source and destination must be different.");
+      return;
+    }
+    try {
+      await createStockTransfer({ from_location: from, to_location: to, notes });
+      setFromLocation("");
+      setToLocation("");
+      setNotes("");
+      loadData();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to create stock transfer.");
+    }
+  };
 
   return (
-    <div className="overflow-x-auto rounded-lg border bg-white">
-      <table className="min-w-full">
-        <thead className="border-b bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-left">
-              Reference
-            </th>
+    <div>
+      <div className="page-head">
+        <div>
+          <h1>Stock Transfers</h1>
+          <div className="sub">Move stock between locations</div>
+        </div>
+      </div>
 
-            <th className="px-4 py-3 text-left">
-              Product
-            </th>
-
-            <th className="px-4 py-3 text-left">
-              Variant
-            </th>
-
-            <th className="px-4 py-3 text-left">
-              From
-            </th>
-
-            <th className="px-4 py-3 text-left">
-              To
-            </th>
-
-            <th className="px-4 py-3 text-right">
-              Quantity
-            </th>
-
-            <th className="px-4 py-3 text-left">
-              Status
-            </th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {transfers.map((transfer) => (
-            <tr
-              key={transfer.id}
-              className="border-b last:border-0 hover:bg-gray-50"
+      <form className="card" onSubmit={handleSubmit}>
+        <div className="card-title">New Transfer</div>
+        <div className="form-grid mt1">
+          <div className="form-group">
+            <label>From Location</label>
+            <select
+              value={fromLocation}
+              onChange={(e) => setFromLocation(e.target.value)}
+              required
             >
-              <td className="px-4 py-3">
-                {transfer.reference}
-              </td>
+              <option value="">Select source</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <td className="px-4 py-3">
-                {transfer.product_name}
-              </td>
+          <div className="form-group">
+            <label>To Location</label>
+            <select
+              value={toLocation}
+              onChange={(e) => setToLocation(e.target.value)}
+              required
+            >
+              <option value="">Select destination</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <td className="px-4 py-3">
-                {transfer.variant_name || "-"}
-              </td>
+          <div className="form-group full">
+            <label>Notes</label>
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Transfer details..."
+            />
+          </div>
+        </div>
+        <div className="form-actions">
+          <button className="btn btn-primary" type="submit">
+            Create Transfer
+          </button>
+        </div>
+      </form>
 
-              <td className="px-4 py-3">
-                {transfer.from_location_name}
-              </td>
-
-              <td className="px-4 py-3">
-                {transfer.to_location_name}
-              </td>
-
-              <td className="px-4 py-3 text-right">
-                {transfer.quantity}
-              </td>
-
-              <td className="px-4 py-3">
-                {transfer.status}
-              </td>
-            </tr>
-          ))}
-
-          {transfers.length === 0 && (
-            <tr>
-              <td
-                colSpan={7}
-                className="p-8 text-center text-gray-500"
-              >
-                No stock transfers found.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <div className="table-wrap">
+        {loading ? (
+          <div className="state">
+            <div className="spinner" />
+            Loading transfers...
+          </div>
+        ) : (
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transfers.map((t) => (
+                <tr key={t.id}>
+                  <td className="mono">{t.reference_number}</td>
+                  <td>{t.from_location_name}</td>
+                  <td>{t.to_location_name}</td>
+                  <td>
+                    <span className="badge badge-blue">{t.status}</span>
+                  </td>
+                  <td className="muted">{t.notes || "-"}</td>
+                </tr>
+              ))}
+              {transfers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="table-empty">
+                    No stock transfers found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
+
+export default StockTransfersPage;

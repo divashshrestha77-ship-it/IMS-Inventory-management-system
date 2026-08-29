@@ -1,95 +1,86 @@
+import { useEffect, useState } from "react";
+import { getLocations } from "../api/inventoryApi";
 import type { StockLocation } from "../types/inventory";
 
-interface StockLocationTableProps {
-  locations: StockLocation[];
-  loading: boolean;
-  onDelete: (id: number) => void;
-}
+function StockLocationsPage() {
+  const [locations, setLocations] = useState<StockLocation[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default function StockLocationTable({
-  locations,
-  loading,
-  onDelete,
-}: StockLocationTableProps) {
-  if (loading) {
-    return (
-      <div className="rounded-lg border bg-white p-8 text-center">
-        Loading stock locations...
-      </div>
-    );
-  }
+  useEffect(() => {
+    getLocations()
+      .then(setLocations)
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const types = new Set(locations.map((l) => l.location_type)).size;
 
   return (
-    <div className="overflow-x-auto rounded-lg border bg-white">
-      <table className="min-w-full">
-        <thead className="border-b bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-left">Name</th>
-            <th className="px-4 py-3 text-left">Code</th>
-            <th className="px-4 py-3 text-left">Type</th>
-            <th className="px-4 py-3 text-left">Address</th>
-            <th className="px-4 py-3 text-left">Status</th>
-            <th className="px-4 py-3 text-right">Actions</th>
-          </tr>
-        </thead>
+    <div>
+      <div className="page-head">
+        <div>
+          <h1>Stock Locations</h1>
+          <div className="sub">Warehouses, stores and bins</div>
+        </div>
+      </div>
 
-        <tbody>
-          {locations.map((location) => (
-            <tr
-              key={location.id}
-              className="border-b last:border-0 hover:bg-gray-50"
-            >
-              <td className="px-4 py-3 font-medium">
-                {location.name}
-              </td>
+      <div className="stats">
+        <div className="stat">
+          <div className="stat-label">Locations</div>
+          <div className="stat-value">{locations.length}</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Types</div>
+          <div className="stat-value">{types}</div>
+        </div>
+      </div>
 
-              <td className="px-4 py-3">
-                {location.code}
-              </td>
-
-              <td className="px-4 py-3">
-                {location.location_type}
-              </td>
-
-              <td className="px-4 py-3">
-                {location.address || "-"}
-              </td>
-
-              <td className="px-4 py-3">
-                {location.is_active ? (
-                  <span className="rounded-full bg-green-100 px-2 py-1 text-xs text-green-700">
-                    Active
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
-                    Inactive
-                  </span>
-                )}
-              </td>
-
-              <td className="px-4 py-3 text-right">
-                <button
-                  onClick={() => onDelete(location.id)}
-                  className="rounded-md px-3 py-1 text-red-600 hover:bg-red-50"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-
-          {locations.length === 0 && (
-            <tr>
-              <td
-                colSpan={6}
-                className="p-8 text-center text-gray-500"
-              >
-                No stock locations found.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <div className="table-wrap">
+        {loading ? (
+          <div className="state">
+            <div className="spinner" />
+            Loading locations...
+          </div>
+        ) : (
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Code</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {locations.map((l) => (
+                <tr key={l.id}>
+                  <td style={{ fontWeight: 600 }}>{l.name}</td>
+                  <td className="mono">{l.code}</td>
+                  <td>{l.location_type}</td>
+                  <td className="muted">{l.description || "-"}</td>
+                  <td>
+                    {l.is_active ? (
+                      <span className="badge badge-green">Active</span>
+                    ) : (
+                      <span className="badge badge-gray">Inactive</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {locations.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="table-empty">
+                    No stock locations found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
+
+export default StockLocationsPage;

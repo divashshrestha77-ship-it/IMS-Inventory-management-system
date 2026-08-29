@@ -1,94 +1,84 @@
+import { useEffect, useState } from "react";
+import { getMovements } from "../api/inventoryApi";
 import type { StockMovement } from "../types/inventory";
 
-interface StockMovementTableProps {
-  movements: StockMovement[];
-  loading: boolean;
-}
+const typeBadge: Record<string, string> = {
+  IN: "badge-green",
+  OUT: "badge-red",
+  TRANSFER: "badge-blue",
+  ADJUSTMENT: "badge-amber",
+};
 
-export default function StockMovementTable({
-  movements,
-  loading,
-}: StockMovementTableProps) {
-  if (loading) {
-    return (
-      <div className="rounded-lg border bg-white p-8 text-center">
-        Loading stock movements...
-      </div>
-    );
-  }
+function StockMovementsPage() {
+  const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getMovements()
+      .then(setMovements)
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
-    <div className="overflow-x-auto rounded-lg border bg-white">
-      <table className="min-w-full">
-        <thead className="border-b bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-left">Product</th>
-            <th className="px-4 py-3 text-left">Variant</th>
-            <th className="px-4 py-3 text-left">Location</th>
-            <th className="px-4 py-3 text-left">Movement</th>
-            <th className="px-4 py-3 text-right">Quantity</th>
-            <th className="px-4 py-3 text-left">Reference</th>
-            <th className="px-4 py-3 text-left">Reason</th>
-            <th className="px-4 py-3 text-left">Date</th>
-          </tr>
-        </thead>
+    <div>
+      <div className="page-head">
+        <div>
+          <h1>Stock Movements</h1>
+          <div className="sub">Every stock in/out/transfer activity</div>
+        </div>
+      </div>
 
-        <tbody>
-          {movements.map((movement) => (
-            <tr
-              key={movement.id}
-              className="border-b last:border-0 hover:bg-gray-50"
-            >
-              <td className="px-4 py-3">
-                {movement.product_name}
-              </td>
-
-              <td className="px-4 py-3">
-                {movement.variant_name || "-"}
-              </td>
-
-              <td className="px-4 py-3">
-                {movement.stock_location_name}
-              </td>
-
-              <td className="px-4 py-3">
-                <span className="rounded-full bg-gray-100 px-2 py-1 text-xs">
-                  {movement.movement_type}
-                </span>
-              </td>
-
-              <td className="px-4 py-3 text-right">
-                {movement.quantity}
-              </td>
-
-              <td className="px-4 py-3">
-                {movement.reference || "-"}
-              </td>
-
-              <td className="px-4 py-3">
-                {movement.reason || "-"}
-              </td>
-
-              <td className="px-4 py-3">
-                {new Date(
-                  movement.created_at
-                ).toLocaleString()}
-              </td>
-            </tr>
-          ))}
-
-          {movements.length === 0 && (
-            <tr>
-              <td
-                colSpan={8}
-                className="p-8 text-center text-gray-500"
-              >
-                No stock movements found.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <div className="table-wrap">
+        {loading ? (
+          <div className="state">
+            <div className="spinner" />
+            Loading movements...
+          </div>
+        ) : (
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Variant</th>
+                <th>Location</th>
+                <th>Movement</th>
+                <th style={{ textAlign: "right" }}>Qty</th>
+                <th>Reference</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movements.map((m) => (
+                <tr key={m.id}>
+                  <td style={{ fontWeight: 600 }}>{m.product_name}</td>
+                  <td className="muted">{m.variant_name || "-"}</td>
+                  <td>{m.location_name}</td>
+                  <td>
+                    <span className={`badge ${typeBadge[m.movement_type] || "badge-gray"}`}>
+                      {m.movement_type}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>{m.quantity_change}</td>
+                  <td className="muted">{m.reference_type || "-"}</td>
+                  <td className="muted">
+                    {new Date(m.created_at).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+              {movements.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="table-empty">
+                    No stock movements found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
+
+export default StockMovementsPage;

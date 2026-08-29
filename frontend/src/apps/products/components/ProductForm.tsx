@@ -1,258 +1,192 @@
-import { useState } from "react";
-
-import type {
-  Product,
-  ProductFormData,
-} from "../types/product";
+import { useEffect, useState } from "react";
+import type { Product, ProductInput, Category, Unit } from "../types/product";
+import { getCategories } from "../api/categoryApi";
+import { getUnits } from "../api/unitApi";
 
 interface ProductFormProps {
-  product?: Product | null;
-  onSubmit: (data: ProductFormData) => void;
-  onCancel: () => void;
+  initialData?: Product | null;
+  onSubmit: (data: ProductInput) => void;
+  submitText: string;
+  onCancel?: () => void;
 }
 
-const ProductForm = ({
-  product,
+function ProductForm({
+  initialData,
   onSubmit,
+  submitText,
   onCancel,
-}: ProductFormProps) => {
-  const [formData, setFormData] =
-    useState<ProductFormData>({
-      name: product?.name ?? "",
-      sku: product?.sku ?? "",
-      description: product?.description ?? "",
-      category: product?.category ?? "",
-      unit: product?.unit ?? "",
-      price: product?.price ?? 0,
-      cost_price: product?.cost_price ?? 0,
-      is_active: product?.is_active ?? true,
-    });
+}: ProductFormProps) {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+
+  const [form, setForm] = useState<ProductInput>({
+    name: initialData?.name ?? "",
+    category: initialData?.category ?? 0,
+    unit: initialData?.unit ?? 0,
+    quantity: initialData?.quantity ?? 1,
+    cost_price: initialData?.cost_price ?? 0,
+    discount_percentage: initialData?.discount_percentage ?? 0,
+    description: initialData?.description ?? "",
+    is_active: initialData?.is_active ?? true,
+  });
+
+  useEffect(() => {
+    Promise.all([getCategories(), getUnits()])
+      .then(([c, u]) => {
+        setCategories(c);
+        setUnits(u);
+      })
+      .catch((err) => console.error(err));
+  }, []);
 
   const handleChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    const { name, value } = event.target;
-
-    setFormData((previous) => ({
-      ...previous,
+    const { name, value, type } = e.target;
+    setForm((prev) => ({
+      ...prev,
       [name]:
-        name === "price" || name === "cost_price"
+        type === "checkbox"
+          ? (e.target as HTMLInputElement).checked
+          : name === "category" || name === "unit"
+          ? Number(value)
+          : ["quantity", "cost_price", "discount_percentage"].includes(name)
           ? Number(value)
           : value,
     }));
   };
 
-  const handleStatusChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData((previous) => ({
-      ...previous,
-      is_active: event.target.checked,
-    }));
-  };
-
-  const handleSubmit = (
-    event: React.FormEvent
-  ) => {
-    event.preventDefault();
-
-    onSubmit(formData);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(form);
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-lg border bg-white p-6"
-    >
-      <h2 className="mb-6 text-xl font-semibold">
-        {product
-          ? "Edit Product"
-          : "Add Product"}
-      </h2>
-
-      <div className="grid gap-5 md:grid-cols-2">
-
-        {/* Product Name */}
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Product Name
-          </label>
-
+    <form className="card" onSubmit={handleSubmit}>
+      <div className="form-grid">
+        <div className="form-group">
+          <label>Product Name</label>
           <input
-            type="text"
             name="name"
-            value={formData.name}
+            value={form.name}
             onChange={handleChange}
-            placeholder="Enter product name"
+            placeholder="e.g. Cotton T-Shirt"
             required
-            className="w-full rounded-md border px-3 py-2"
           />
         </div>
 
-        {/* SKU */}
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            SKU
-          </label>
-
-          <input
-            type="text"
-            name="sku"
-            value={formData.sku}
-            onChange={handleChange}
-            placeholder="Enter SKU"
-            required
-            className="w-full rounded-md border px-3 py-2"
-          />
-        </div>
-
-        {/* Category */}
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Category
-          </label>
-
+        <div className="form-group">
+          <label>Category</label>
           <select
             name="category"
-            value={formData.category}
+            value={form.category || ""}
             onChange={handleChange}
-            className="w-full rounded-md border px-3 py-2"
+            required
           >
-            <option value="">
+            <option value="" disabled>
               Select category
             </option>
-
-            <option value="Food">
-              Food
-            </option>
-
-            <option value="Beverage">
-              Beverage
-            </option>
-
-            <option value="Electronics">
-              Electronics
-            </option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
           </select>
         </div>
 
-        {/* Unit */}
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Unit
-          </label>
-
+        <div className="form-group">
+          <label>Unit</label>
           <select
             name="unit"
-            value={formData.unit}
+            value={form.unit || ""}
             onChange={handleChange}
-            className="w-full rounded-md border px-3 py-2"
+            required
           >
-            <option value="">
+            <option value="" disabled>
               Select unit
             </option>
-
-            <option value="Piece">
-              Piece
-            </option>
-
-            <option value="Kg">
-              Kg
-            </option>
-
-            <option value="Liter">
-              Liter
-            </option>
+            {units.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
           </select>
         </div>
 
-        {/* Price */}
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Selling Price
-          </label>
-
+        <div className="form-group">
+          <label>Quantity</label>
           <input
             type="number"
-            name="price"
-            value={formData.price}
-            onChange={handleChange}
+            name="quantity"
             min="0"
+            value={form.quantity}
+            onChange={handleChange}
             required
-            className="w-full rounded-md border px-3 py-2"
           />
         </div>
 
-        {/* Cost Price */}
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Cost Price
-          </label>
-
+        <div className="form-group">
+          <label>Cost Price (Rs.)</label>
           <input
             type="number"
             name="cost_price"
-            value={formData.cost_price}
-            onChange={handleChange}
             min="0"
+            step="0.01"
+            value={form.cost_price}
+            onChange={handleChange}
             required
-            className="w-full rounded-md border px-3 py-2"
           />
         </div>
 
-        {/* Description */}
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium">
-            Description
-          </label>
+        <div className="form-group">
+          <label>Discount %</label>
+          <input
+            type="number"
+            name="discount_percentage"
+            min="0"
+            max="100"
+            step="0.01"
+            value={form.discount_percentage}
+            onChange={handleChange}
+          />
+        </div>
 
+        <div className="form-group full">
+          <label>Description</label>
           <textarea
             name="description"
-            value={formData.description}
-            onChange={handleChange}
             rows={4}
-            placeholder="Enter product description"
-            className="w-full rounded-md border px-3 py-2"
+            value={form.description}
+            onChange={handleChange}
+            placeholder="Product details..."
           />
         </div>
 
-        {/* Status */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={formData.is_active}
-            onChange={handleStatusChange}
-          />
-
-          <label className="text-sm">
-            Active Product
+        <div className="form-group">
+          <label className="form-check">
+            <input
+              type="checkbox"
+              name="is_active"
+              checked={form.is_active}
+              onChange={handleChange}
+            />
+            Active product
           </label>
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="mt-6 flex gap-3">
-        <button
-          type="submit"
-          className="rounded-md bg-blue-600 px-5 py-2 text-white hover:bg-blue-700"
-        >
-          {product
-            ? "Update Product"
-            : "Create Product"}
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary">
+          {submitText}
         </button>
-
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-md border px-5 py-2"
-        >
-          Cancel
-        </button>
+        {onCancel && (
+          <button type="button" className="btn btn-secondary" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
       </div>
     </form>
   );
-};
+}
 
 export default ProductForm;

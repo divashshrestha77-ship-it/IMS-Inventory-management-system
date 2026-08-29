@@ -1,420 +1,181 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import {
-  getProducts,
-  deleteProduct,
-} from "../api/productApi";
+import { getProducts, deleteProduct } from "../api/productApi";
+import type { Product } from "../types/product";
 
-import type {
-  Product,
-} from "../api/productApi";
+function ProductsPage() {
+  const navigate = useNavigate();
 
-
-export default function ProductsPage() {
-  // Store products from Django API
   const [products, setProducts] = useState<Product[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Loading state
-  const [loading, setLoading] = useState<boolean>(true);
-
-  // Error state
-  const [error, setError] = useState<string>("");
-
-  // Search state
-  const [search, setSearch] = useState<string>("");
-
-
-  // ==============================
-  // GET PRODUCTS FROM DJANGO
-  // ==============================
   const loadProducts = async () => {
     try {
       setLoading(true);
-      setError("");
-
       const data = await getProducts();
-
       setProducts(data);
+      setError("");
     } catch (err) {
       console.error(err);
-
       setError("Failed to load products.");
     } finally {
       setLoading(false);
     }
   };
 
-
-  // ==============================
-  // DELETE PRODUCT
-  // ==============================
-  const handleDelete = async (id: number) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this product?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteProduct(id);
-
-      // Remove deleted product from UI
-      setProducts((currentProducts) =>
-        currentProducts.filter(
-          (product) => product.id !== id
-        )
-      );
-
-    } catch (err) {
-      console.error(err);
-
-      alert("Failed to delete product.");
-    }
-  };
-
-
-  // ==============================
-  // LOAD PRODUCTS WHEN PAGE OPENS
-  // ==============================
   useEffect(() => {
     loadProducts();
   }, []);
 
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Delete this product?")) return;
+    try {
+      await deleteProduct(id);
+      setProducts((c) => c.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete product.");
+    }
+  };
 
-  // ==============================
-  // SEARCH PRODUCTS
-  // ==============================
-  const filteredProducts = products.filter((product) => {
-    const searchText = search.toLowerCase();
+  const value = search.toLowerCase();
+  const filtered = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(value) ||
+      p.slug.toLowerCase().includes(value)
+  );
 
-    return (
-      product.name.toLowerCase().includes(searchText) ||
-      product.sku.toLowerCase().includes(searchText)
-    );
-  });
+  const totalValue = products.reduce((s, p) => s + Number(p.selling_price || 0), 0);
+  const totalStock = products.reduce((s, p) => s + Number(p.quantity || 0), 0);
+  const activeCount = products.filter((p) => p.is_active).length;
 
-
-  // ==============================
-  // LOADING
-  // ==============================
-  if (loading) {
-    return (
-      <div
-        style={{
-          padding: "30px",
-          fontSize: "18px",
-        }}
-      >
-        Loading products...
-      </div>
-    );
-  }
-
-
-  // ==============================
-  // PAGE
-  // ==============================
   return (
-    <div
-      style={{
-        padding: "30px",
-        maxWidth: "1200px",
-        margin: "0 auto",
-      }}
-    >
-
-      {/* PAGE HEADER */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "25px",
-        }}
-      >
-
+    <div>
+      <div className="page-head">
         <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "28px",
-            }}
-          >
-            Products
-          </h1>
-
-          <p
-            style={{
-              marginTop: "8px",
-              color: "#666",
-            }}
-          >
-            Manage your products and inventory
-          </p>
+          <h1>Products</h1>
+          <div className="sub">Manage your product catalog</div>
         </div>
-
-
-        <button
-          onClick={loadProducts}
-          style={{
-            padding: "10px 18px",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
-          Refresh
+        <button className="btn btn-primary" onClick={() => navigate("/products/add")}>
+          + Add Product
         </button>
-
       </div>
 
-
-      {/* ERROR MESSAGE */}
-      {error && (
-        <div
-          style={{
-            padding: "12px",
-            marginBottom: "20px",
-            borderRadius: "6px",
-          }}
-        >
-          {error}
+      <div className="stats">
+        <div className="stat">
+          <div className="stat-label">Total Products</div>
+          <div className="stat-value">{products.length}</div>
         </div>
-      )}
-
-
-      {/* SEARCH */}
-      <div
-        style={{
-          marginBottom: "20px",
-        }}
-      >
-
-        <input
-          type="text"
-          placeholder="Search by product name or SKU..."
-          value={search}
-          onChange={(event) =>
-            setSearch(event.target.value)
-          }
-          style={{
-            width: "100%",
-            maxWidth: "400px",
-            padding: "10px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            fontSize: "14px",
-          }}
-        />
-
+        <div className="stat">
+          <div className="stat-label">Active</div>
+          <div className="stat-value">{activeCount}</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Stock Qty</div>
+          <div className="stat-value">{totalStock}</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Stock Value</div>
+          <div className="stat-value">Rs. {totalValue.toLocaleString()}</div>
+        </div>
       </div>
 
-
-      {/* PRODUCT COUNT */}
-      <div
-        style={{
-          marginBottom: "15px",
-          color: "#555",
-        }}
-      >
-        Showing {filteredProducts.length} of{" "}
-        {products.length} products
-      </div>
-
-
-      {/* NO PRODUCTS */}
-      {filteredProducts.length === 0 ? (
-
-        <div
-          style={{
-            padding: "30px",
-            textAlign: "center",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-          }}
-        >
-          No products found.
+      <div className="card">
+        <div className="card-head">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by name or slug..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button className="btn btn-secondary btn-sm" onClick={loadProducts}>
+            Refresh
+          </button>
         </div>
 
-      ) : (
+        {error && <div className="alert-error">{error}</div>}
 
-        /* PRODUCT TABLE */
-        <div
-          style={{
-            overflowX: "auto",
-          }}
-        >
-
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-            }}
-          >
-
-            <thead>
-
-              <tr>
-
-                <th
-                  style={{
-                    padding: "12px",
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                  }}
-                >
-                  ID
-                </th>
-
-                <th
-                  style={{
-                    padding: "12px",
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                  }}
-                >
-                  Product Name
-                </th>
-
-                <th
-                  style={{
-                    padding: "12px",
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                  }}
-                >
-                  SKU
-                </th>
-
-                <th
-                  style={{
-                    padding: "12px",
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                  }}
-                >
-                  Price
-                </th>
-
-                <th
-                  style={{
-                    padding: "12px",
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                  }}
-                >
-                  Quantity
-                </th>
-
-                <th
-                  style={{
-                    padding: "12px",
-                    textAlign: "center",
-                    borderBottom: "1px solid #ddd",
-                  }}
-                >
-                  Action
-                </th>
-
-              </tr>
-
-            </thead>
-
-
-            <tbody>
-
-              {filteredProducts.map((product) => (
-
-                <tr key={product.id}>
-
-                  <td
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    {product.id}
-                  </td>
-
-
-                  <td
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    {product.name}
-                  </td>
-
-
-                  <td
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    {product.sku}
-                  </td>
-
-
-                  <td
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    Rs. {product.price}
-                  </td>
-
-
-                  <td
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    {product.quantity}
-                  </td>
-
-
-                  <td
-                    style={{
-                      padding: "12px",
-                      textAlign: "center",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-
-                    <button
-                      onClick={() =>
-                        handleDelete(product.id)
-                      }
-                      style={{
-                        padding: "7px 12px",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Delete
-                    </button>
-
-                  </td>
-
+        {loading ? (
+          <div className="state">
+            <div className="spinner" />
+            Loading products...
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Unit</th>
+                  <th>Qty</th>
+                  <th>Selling Price</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
                 </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      )}
-
+              </thead>
+              <tbody>
+                {filtered.map((p) => (
+                  <tr key={p.id}>
+                    <td className="mono">{p.id}</td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{p.name}</div>
+                      <div className="muted" style={{ fontSize: 12 }}>
+                        {p.slug}
+                      </div>
+                    </td>
+                    <td>{p.category_name}</td>
+                    <td>{p.unit_name}</td>
+                    <td>{p.quantity}</td>
+                    <td>Rs. {Number(p.selling_price || 0).toLocaleString()}</td>
+                    <td>
+                      {p.is_active ? (
+                        <span className="badge badge-green">Active</span>
+                      ) : (
+                        <span className="badge badge-gray">Inactive</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <button
+                        className="btn btn-link btn-sm"
+                        onClick={() => navigate(`/products/${p.id}`)}
+                      >
+                        View
+                      </button>
+                      <button
+                        className="btn btn-link btn-sm"
+                        onClick={() => navigate(`/products/${p.id}/edit`)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-link-danger btn-sm"
+                        onClick={() => handleDelete(p.id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="table-empty">
+                      No products found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+export default ProductsPage;

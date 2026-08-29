@@ -1,201 +1,132 @@
 import { useEffect, useState } from "react";
-
 import {
   getStockCounts,
   createStockCount,
+  getLocations,
 } from "../api/inventoryApi";
+import type { StockCount, StockLocation } from "../types/inventory";
 
-import type { StockCount } from "../types/inventory";
-
-export default function StockCountsPage() {
+function StockCountsPage() {
   const [counts, setCounts] = useState<StockCount[]>([]);
-
+  const [locations, setLocations] = useState<StockLocation[]>([]);
   const [location, setLocation] = useState("");
-
-  const [countDate, setCountDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
-
   const [notes, setNotes] = useState("");
-
   const [loading, setLoading] = useState(true);
 
-  const loadCounts = async () => {
+  const loadData = async () => {
     try {
-      setLoading(true);
-
-      const data = await getStockCounts();
-
-      setCounts(data);
-    } catch (err) {
-      console.error(err);
+      const [c, l] = await Promise.all([getStockCounts(), getLocations()]);
+      setCounts(c);
+      setLocations(l);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadCounts();
+    loadData();
   }, []);
 
-  const handleCreate = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
-
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!location) {
       alert("Please select a location.");
       return;
     }
-
     try {
-      await createStockCount({
-        stock_location: Number(location),
-        count_date: countDate,
-        notes,
-      });
-
-      alert("Stock count created successfully.");
-
+      await createStockCount({ location: Number(location), notes });
       setLocation("");
       setNotes("");
-
-      loadCounts();
-    } catch (err) {
-      console.error(err);
-
+      loadData();
+    } catch (error) {
+      console.error(error);
       alert("Unable to create stock count.");
     }
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">
-          Stock Counts
-        </h1>
-
-        <p className="text-sm text-gray-500">
-          Record and verify physical stock quantities.
-        </p>
+    <div>
+      <div className="page-head">
+        <div>
+          <h1>Stock Counts</h1>
+          <div className="sub">Record and verify physical stock quantities</div>
+        </div>
       </div>
 
-      <form
-        onSubmit={handleCreate}
-        className="space-y-4 rounded-lg border bg-white p-6"
-      >
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Location ID
-          </label>
+      <form className="card" onSubmit={handleCreate}>
+        <div className="card-title">Start Stock Count</div>
+        <div className="form-grid mt1">
+          <div className="form-group">
+            <label>Location</label>
+            <select
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              required
+            >
+              <option value="">Select location</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <input
-            type="number"
-            value={location}
-            onChange={(event) =>
-              setLocation(event.target.value)
-            }
-            placeholder="Location ID"
-            className="w-full rounded-md border px-3 py-2"
-          />
+          <div className="form-group">
+            <label>Notes</label>
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional notes..."
+            />
+          </div>
         </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Count Date
-          </label>
-
-          <input
-            type="date"
-            value={countDate}
-            onChange={(event) =>
-              setCountDate(event.target.value)
-            }
-            className="rounded-md border px-3 py-2"
-          />
+        <div className="form-actions">
+          <button className="btn btn-primary" type="submit">
+            Start Stock Count
+          </button>
         </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Notes
-          </label>
-
-          <textarea
-            value={notes}
-            onChange={(event) =>
-              setNotes(event.target.value)
-            }
-            rows={3}
-            className="w-full rounded-md border px-3 py-2"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="rounded-md bg-black px-4 py-2 text-white"
-        >
-          Start Stock Count
-        </button>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      <div className="table-wrap">
         {loading ? (
-          <div className="p-8 text-center">
+          <div className="state">
+            <div className="spinner" />
             Loading stock counts...
           </div>
         ) : (
-          <table className="min-w-full">
-            <thead className="border-b bg-gray-50">
+          <table className="data">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left">
-                  Reference
-                </th>
-
-                <th className="px-4 py-3 text-left">
-                  Location
-                </th>
-
-                <th className="px-4 py-3 text-left">
-                  Count Date
-                </th>
-
-                <th className="px-4 py-3 text-left">
-                  Status
-                </th>
-
-                <th className="px-4 py-3 text-left">
-                  Counted By
-                </th>
+                <th>ID</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Counted By</th>
+                <th>Notes</th>
               </tr>
             </thead>
-
             <tbody>
-              {counts.map((count) => (
-                <tr
-                  key={count.id}
-                  className="border-b last:border-0"
-                >
-                  <td className="px-4 py-3">
-                    {count.reference}
+              {counts.map((c) => (
+                <tr key={c.id}>
+                  <td className="mono">{c.id}</td>
+                  <td>{c.location_name}</td>
+                  <td>
+                    <span className="badge badge-amber">{c.status}</span>
                   </td>
-
-                  <td className="px-4 py-3">
-                    {count.stock_location_name}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    {count.count_date}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    {count.status}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    {count.counted_by_name || "-"}
-                  </td>
+                  <td className="muted">{c.counted_by_name || "-"}</td>
+                  <td className="muted">{c.notes || "-"}</td>
                 </tr>
               ))}
+              {counts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="table-empty">
+                    No stock counts found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}
@@ -203,3 +134,5 @@ export default function StockCountsPage() {
     </div>
   );
 }
+
+export default StockCountsPage;
