@@ -28,29 +28,11 @@ export function StockDistributionBoard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Initial Locations matching user's wireframe diagram
-  const [locations, setLocations] = useState<StockLocation[]>([
-    { id: 1, name: "Bangkok Warehouse", code: "BKK-WH", location_type: "Warehouse", phone: "", description: "Main Hub", is_active: true, created_at: "", updated_at: "" },
-    { id: 2, name: "Bkk Central World", code: "BKK-CW", location_type: "Store", phone: "", description: "Central Retail", is_active: true, created_at: "", updated_at: "" },
-    { id: 3, name: "Central Chiangmai", code: "CNX-CM", location_type: "Store", phone: "", description: "North Branch", is_active: true, created_at: "", updated_at: "" },
-    { id: 4, name: "Pattaya Store", code: "PTY-ST", location_type: "Store", phone: "", description: "Coast Branch", is_active: true, created_at: "", updated_at: "" },
-  ]);
+  // Locations loaded dynamically from live API
+  const [locations, setLocations] = useState<StockLocation[]>([]);
 
-  // Initial Stock items matching user's wireframe (SKU 1012514, SKU 123131, SKU 987654)
-  const [stockItems, setStockItems] = useState<StockCardItem[]>([
-    { id: "1-1", sku: "1012514", productName: "Wireless Noise-Canceling Earbuds", locationId: 1, locationName: "Bangkok Warehouse", quantity: 1000 },
-    { id: "1-2", sku: "1012514", productName: "Wireless Noise-Canceling Earbuds", locationId: 2, locationName: "Bkk Central World", quantity: 100 },
-    { id: "1-3", sku: "1012514", productName: "Wireless Noise-Canceling Earbuds", locationId: 3, locationName: "Central Chiangmai", quantity: 200 },
-    { id: "1-4", sku: "1012514", productName: "Wireless Noise-Canceling Earbuds", locationId: 4, locationName: "Pattaya Store", quantity: 150 },
-
-    { id: "2-1", sku: "123131", productName: "Pro Ergonomic Desk Chair", locationId: 1, locationName: "Bangkok Warehouse", quantity: 1323 },
-    { id: "2-2", sku: "123131", productName: "Pro Ergonomic Desk Chair", locationId: 2, locationName: "Bkk Central World", quantity: 240 },
-    { id: "2-3", sku: "123131", productName: "Pro Ergonomic Desk Chair", locationId: 3, locationName: "Central Chiangmai", quantity: 180 },
-
-    { id: "3-1", sku: "987654", productName: "Mechanical RGB Gaming Keyboard", locationId: 1, locationName: "Bangkok Warehouse", quantity: 500 },
-    { id: "3-2", sku: "987654", productName: "Mechanical RGB Gaming Keyboard", locationId: 2, locationName: "Bkk Central World", quantity: 350 },
-    { id: "3-4", sku: "987654", productName: "Mechanical RGB Gaming Keyboard", locationId: 4, locationName: "Pattaya Store", quantity: 210 },
-  ]);
+  // Stock items loaded from live API
+  const [stockItems, setStockItems] = useState<StockCardItem[]>([]);
 
   // Modal State
   const [modal, setModal] = useState<TransferModalState>({
@@ -65,12 +47,15 @@ export function StockDistributionBoard() {
     notes: "",
   });
 
-  // Try loading real API data if available
+  // Load real API data from live backend
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [apiLocs, apiInv] = await Promise.all([getLocations(), getInventory()]);
-        if (apiLocs && apiLocs.length > 0) setLocations(apiLocs);
+        const [apiLocs, apiInv] = await Promise.all([
+          getLocations().catch(() => []),
+          getInventory().catch(() => []),
+        ]);
+        setLocations(apiLocs || []);
         if (apiInv && apiInv.length > 0) {
           const mapped: StockCardItem[] = apiInv.map((item, index) => ({
             id: `api-${item.id || index}`,
@@ -82,8 +67,8 @@ export function StockDistributionBoard() {
           }));
           setStockItems(mapped);
         }
-      } catch {
-        // Fallback to rich wireframe mock data when API is offline
+      } catch (err) {
+        console.error(err);
       }
     };
     fetchData();

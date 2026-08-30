@@ -39,3 +39,16 @@ export const deleteCategory = async (id: number): Promise<void> => {
     await fetch(`${endpoints.categories}${id}/`, { method: "DELETE" })
   );
 };
+
+export const updateCategory = async (
+  id: number,
+  category: Partial<Category>
+): Promise<Category> => {
+  return handle(
+    await fetch(`${endpoints.categories}${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(category),
+    })
+  );
+};

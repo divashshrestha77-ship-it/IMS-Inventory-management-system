@@ -7,16 +7,19 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'https://ims-r9e5.onrender.com',
         changeOrigin: true,
+        secure: false,
       },
       '/product': {
-        target: 'http://127.0.0.1:8000',
+        target: 'https://ims-r9e5.onrender.com',
         changeOrigin: true,
+        secure: false,
       },
       '/inventory': {
-        target: 'http://127.0.0.1:8000',
+        target: 'https://ims-r9e5.onrender.com',
         changeOrigin: true,
+        secure: false,
       },
     },
   },

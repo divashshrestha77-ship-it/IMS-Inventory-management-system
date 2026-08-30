@@ -1,4 +1,10 @@
-export const API_BASE = "/api";
+const REMOTE_HOST = "https://ims-r9e5.onrender.com";
+
+export const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "/api"
+    : `${REMOTE_HOST}/api`);
 
 export const endpoints = {
   products: `${API_BASE}/products/`,

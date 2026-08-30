@@ -29,9 +29,82 @@ export async function getInventory(): Promise<Inventory[]> {
   return handle(await fetch(endpoints.inventory));
 }
 
+export async function createInventory(data: {
+  product: number;
+  location: number;
+  quantity: number;
+}): Promise<Inventory> {
+  return handle(
+    await fetch(endpoints.inventory, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+  );
+}
+
+export async function updateInventory(
+  id: number,
+  data: Partial<Inventory>
+): Promise<Inventory> {
+  return handle(
+    await fetch(`${endpoints.inventory}${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+  );
+}
+
+export async function deleteInventory(id: number): Promise<void> {
+  return handle(
+    await fetch(`${endpoints.inventory}${id}/`, {
+      method: "DELETE",
+    })
+  );
+}
+
 // --- Stock Locations ---
 export async function getLocations(): Promise<StockLocation[]> {
   return handle(await fetch(endpoints.locations));
+}
+
+export async function createLocation(data: {
+  name: string;
+  code: string;
+  location_type?: string;
+  phone?: string;
+  description?: string;
+  is_active?: boolean;
+}): Promise<StockLocation> {
+  return handle(
+    await fetch(endpoints.locations, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+  );
+}
+
+export async function updateLocation(
+  id: number,
+  data: Partial<StockLocation>
+): Promise<StockLocation> {
+  return handle(
+    await fetch(`${endpoints.locations}${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+  );
+}
+
+export async function deleteLocation(id: number): Promise<void> {
+  return handle(
+    await fetch(`${endpoints.locations}${id}/`, {
+      method: "DELETE",
+    })
+  );
 }
 
 // --- Stock Movements ---
