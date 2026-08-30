@@ -43,6 +43,16 @@ export interface Product {
   variants?: ProductVariant[];
 }
 
+export interface ProductVariantInput {
+  id?: number;
+  name: string;
+  sku: string;
+  barcode?: string;
+  selling_price: number;
+  cost_price: number;
+  is_active?: boolean;
+}
+
 export interface ProductInput {
   name: string;
   category: number;
@@ -52,4 +62,6 @@ export interface ProductInput {
   discount_percentage?: number;
   description?: string;
   is_active?: boolean;
+  variants?: ProductVariantInput[];
 }
+

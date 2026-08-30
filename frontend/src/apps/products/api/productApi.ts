@@ -1,5 +1,10 @@
 import { endpoints } from "../../../config";
-import type { Product, ProductInput } from "../types/product";
+import type {
+  Product,
+  ProductInput,
+  ProductVariant,
+  ProductVariantInput,
+} from "../types/product";
 
 async function handle<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -57,3 +62,35 @@ export const deleteProduct = async (id: number): Promise<void> => {
     await fetch(`${endpoints.products}${id}/`, { method: "DELETE" })
   );
 };
+
+export const createVariant = async (
+  variantData: ProductVariantInput & { product: number }
+): Promise<ProductVariant> => {
+  return handle(
+    await fetch(endpoints.variants, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(variantData),
+    })
+  );
+};
+
+export const updateVariant = async (
+  id: number,
+  variantData: Partial<ProductVariantInput>
+): Promise<ProductVariant> => {
+  return handle(
+    await fetch(`${endpoints.variants}${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(variantData),
+    })
+  );
+};
+
+export const deleteVariant = async (id: number): Promise<void> => {
+  return handle(
+    await fetch(`${endpoints.variants}${id}/`, { method: "DELETE" })
+  );
+};
+

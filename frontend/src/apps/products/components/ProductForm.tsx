@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import type { Product, ProductInput, Category, Unit } from "../types/product";
+import type {
+  Product,
+  ProductInput,
+  ProductVariantInput,
+  Category,
+  Unit,
+} from "../types/product";
 import { getCategories } from "../api/categoryApi";
 import { getUnits } from "../api/unitApi";
 
@@ -30,6 +36,18 @@ function ProductForm({
     is_active: initialData?.is_active ?? true,
   });
 
+  const [variants, setVariants] = useState<ProductVariantInput[]>(
+    initialData?.variants?.map((v) => ({
+      id: v.id,
+      name: v.name,
+      sku: v.sku,
+      barcode: v.barcode ?? "",
+      selling_price: v.selling_price,
+      cost_price: v.cost_price,
+      is_active: v.is_active ?? true,
+    })) ?? []
+  );
+
   useEffect(() => {
     Promise.all([getCategories(), getUnits()])
       .then(([c, u]) => {
@@ -56,9 +74,46 @@ function ProductForm({
     }));
   };
 
+  const handleAddVariant = () => {
+    const count = variants.length + 1;
+    const prefix = form.name
+      ? form.name.replace(/[^a-zA-Z0-9]/g, "").substring(0, 4).toUpperCase()
+      : "VAR";
+    const autoSku = `${prefix}-${count}`;
+
+    setVariants((prev) => [
+      ...prev,
+      {
+        name: `Variant ${count}`,
+        sku: autoSku,
+        barcode: "",
+        selling_price: Number(form.cost_price || 0) > 0 ? Number(form.cost_price) * 1.2 : 0,
+        cost_price: Number(form.cost_price || 0),
+        is_active: true,
+      },
+    ]);
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    setVariants((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleVariantChange = (
+    index: number,
+    field: keyof ProductVariantInput,
+    val: string | number | boolean
+  ) => {
+    setVariants((prev) =>
+      prev.map((v, i) => (i === index ? { ...v, [field]: val } : v))
+    );
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(form);
+    onSubmit({
+      ...form,
+      variants,
+    });
   };
 
   return (
@@ -173,6 +228,139 @@ function ProductForm({
             Active product
           </label>
         </div>
+
+        {/* Product Variants Section */}
+        <div className="variant-section">
+          <div className="variant-section-head">
+            <div className="variant-section-title">
+              <span>◈ Product Variants</span>
+              {variants.length > 0 && (
+                <span className="variant-badge">{variants.length} added</span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleAddVariant}
+            >
+              + Add Variant
+            </button>
+          </div>
+
+          {variants.length === 0 ? (
+            <div className="muted" style={{ fontSize: 13, fontStyle: "italic" }}>
+              No variants added yet. Click "+ Add Variant" above to add size, color, or style options.
+            </div>
+          ) : (
+            variants.map((v, idx) => (
+              <div key={idx} className="variant-card">
+                <div className="variant-card-header">
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>
+                    Variant #{idx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-link-danger btn-sm"
+                    onClick={() => handleRemoveVariant(idx)}
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="variant-grid">
+                  <div className="form-group">
+                    <label>Variant Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Red / Large"
+                      value={v.name}
+                      onChange={(e) =>
+                        handleVariantChange(idx, "name", e.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>SKU</label>
+                    <input
+                      type="text"
+                      className="mono"
+                      placeholder="e.g. TSH-RED-L"
+                      value={v.sku}
+                      onChange={(e) =>
+                        handleVariantChange(idx, "sku", e.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Barcode</label>
+                    <input
+                      type="text"
+                      className="mono"
+                      placeholder="e.g. 89012345"
+                      value={v.barcode || ""}
+                      onChange={(e) =>
+                        handleVariantChange(idx, "barcode", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Selling Price (Rs.)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={v.selling_price}
+                      onChange={(e) =>
+                        handleVariantChange(
+                          idx,
+                          "selling_price",
+                          Number(e.target.value)
+                        )
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Cost Price (Rs.)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={v.cost_price}
+                      onChange={(e) =>
+                        handleVariantChange(
+                          idx,
+                          "cost_price",
+                          Number(e.target.value)
+                        )
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ justifyContent: "center" }}>
+                    <label className="form-check" style={{ marginTop: 20 }}>
+                      <input
+                        type="checkbox"
+                        checked={v.is_active !== false}
+                        onChange={(e) =>
+                          handleVariantChange(idx, "is_active", e.target.checked)
+                        }
+                      />
+                      Active variant
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div className="form-actions">
@@ -190,3 +378,4 @@ function ProductForm({
 }
 
 export default ProductForm;
+

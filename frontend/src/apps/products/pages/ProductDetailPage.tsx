@@ -99,6 +99,59 @@ function ProductDetailPage() {
           {product.description && (
             <p className="mt2 muted">{product.description}</p>
           )}
+
+          {/* Product Variants Section */}
+          <div className="variant-section" style={{ marginTop: 24 }}>
+            <div className="variant-section-head">
+              <div className="variant-section-title">
+                <span>◈ Product Variants</span>
+                {product.variants && product.variants.length > 0 && (
+                  <span className="variant-badge">
+                    {product.variants.length} variant{product.variants.length > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {!product.variants || product.variants.length === 0 ? (
+              <div className="muted" style={{ fontSize: 14 }}>
+                No variants configured for this product.
+              </div>
+            ) : (
+              <div className="table-wrap" style={{ marginTop: 12 }}>
+                <table className="data">
+                  <thead>
+                    <tr>
+                      <th>Variant Name</th>
+                      <th>SKU</th>
+                      <th>Barcode</th>
+                      <th>Cost Price</th>
+                      <th>Selling Price</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {product.variants.map((v, i) => (
+                      <tr key={v.id || i}>
+                        <td style={{ fontWeight: 600 }}>{v.name}</td>
+                        <td className="mono">{v.sku}</td>
+                        <td className="mono">{v.barcode || "—"}</td>
+                        <td>Rs. {v.cost_price}</td>
+                        <td>Rs. {v.selling_price}</td>
+                        <td>
+                          {v.is_active ? (
+                            <span className="badge badge-green">Active</span>
+                          ) : (
+                            <span className="badge badge-gray">Inactive</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -106,3 +159,4 @@ function ProductDetailPage() {
 }
 
 export default ProductDetailPage;
+
